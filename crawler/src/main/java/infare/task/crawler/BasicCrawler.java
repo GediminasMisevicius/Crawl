@@ -15,7 +15,7 @@ public class BasicCrawler {
 
   public BasicCrawler() {}
 
-  public void norwegianData() {
+  public void norwegianData() throws InterruptedException {
     String norURL = "";
     FileWriter writer = null;
 
@@ -40,6 +40,7 @@ public class BasicCrawler {
       }
 
       try {
+        Thread.sleep(2000);
         this.doc = Jsoup.connect(norURL).get();
       } catch (IOException e) {
         System.err.println(e.getMessage());

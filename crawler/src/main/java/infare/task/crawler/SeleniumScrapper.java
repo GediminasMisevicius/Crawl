@@ -16,9 +16,14 @@ import java.util.regex.Pattern;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.firefox.FirefoxProfile;
+import org.openqa.selenium.phantomjs.PhantomJSDriver;
+import org.openqa.selenium.phantomjs.PhantomJSDriverService;
+import org.openqa.selenium.remote.DesiredCapabilities;
 
 public class SeleniumScrapper {
 
@@ -27,13 +32,18 @@ public class SeleniumScrapper {
   public WebDriver driver;
 
   // Opens a browser that goes to SAS website
-  public void openSAS() {
+  public void openSAS() throws InterruptedException {
     profile.setPreference("general.useragent.override",
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/71.0.3578.98 Chrome/71.0.3578.98 Safari/537.36");
     FirefoxOptions options = new FirefoxOptions();
     options.setCapability(FirefoxDriver.PROFILE, profile);
     driver = new FirefoxDriver(options);
+
+
+
     driver.navigate().to("https://classic.flysas.com/en/de/");
+
+
   }
 
   // Closes the browser
@@ -64,18 +74,27 @@ public class SeleniumScrapper {
     Thread.sleep(800);
 
     outwardDate.click();
-    WebElement outMo = driver.findElement(By.xpath("/html/body/div[3]/div/div/span[4]"));
+    WebElement outMo = driver.findElement(By.xpath("/html/body/div[3]/div/div/span[4]")); // firefox
+    Thread.sleep(1000);
+    // WebElement outMo =
+    // driver.findElement(By.xpath("//*[@id=\"ui-datepicker-div\"]/div/div/span[4]")); //chrome
     outMo.click();
     Thread.sleep(1000);
 
-    WebElement outDay = driver.findElement(By.xpath("/html/body/div[3]/table/tbody/tr[2]/td[1]/a"));
+    WebElement outDay = driver.findElement(By.xpath("/html/body/div[3]/table/tbody/tr[2]/td[1]/a")); // firefox
+    // WebElement outDay =
+    // driver.findElement(By.xpath("//*[@id=\"ui-datepicker-div\"]/table/tbody/tr[2]/td[1]/a"));
+    // //chrome
     outDay.click();
     Thread.sleep(500);
 
     returnDate.click();
     Thread.sleep(1000);
 
-    WebElement retDay = driver.findElement(By.xpath("/html/body/div[3]/table/tbody/tr[3]/td[2]/a"));
+    WebElement retDay = driver.findElement(By.xpath("/html/body/div[3]/table/tbody/tr[3]/td[2]/a")); // firefox
+    // WebElement retDay =
+    // driver.findElement(By.xpath("//*[@id=\"ui-datepicker-div\"]/table/tbody/tr[3]/td[2]/a"));
+    // //chrome
     retDay.click();
     Thread.sleep(1000);
 
@@ -84,7 +103,7 @@ public class SeleniumScrapper {
 
   // Writes page source to text file
   public void getSource() throws InterruptedException {
-    Thread.sleep(10000);
+    Thread.sleep(20000);
     String pageSource = driver.getPageSource();
 
     FileWriter writer = null;
@@ -108,7 +127,7 @@ public class SeleniumScrapper {
   // Extracts needed data from source file
   public void getDataFromSource() {
 
-    String file = "SAS.txt";
+    String file = "SAS_Source.txt";
     StringBuilder builder = new StringBuilder();
     BufferedReader reader = null;
 
@@ -314,37 +333,38 @@ public class SeleniumScrapper {
       }
 
     }
-    
-    
+
+
     visualiseData(outbound, inbound);
 
 
   }
-  
+
   public void visualiseData(List<Flight> outbound, List<Flight> inbound) {
-    
+
     List<Flight> combinationPrices = new ArrayList<>();
-    
-    for(Flight out : outbound) {
-      for(Flight in : inbound) {
+
+    for (Flight out : outbound) {
+      for (Flight in : inbound) {
         Flight comb = new Flight();
         comb.setPrice(out.getPrice().add(in.getPrice()));
         comb.setTax(out.getTax().add(in.getTax()));
         combinationPrices.add(comb);
       }
     }
-    
+
     Collections.sort(combinationPrices, Comparator.comparing(Flight::getPrice));
-    
-    
+
+
     FileWriter writer = null;
-    
+
     try {
       writer = new FileWriter("SAS_prices.txt");
-      writer.write("Cheapest price:\n" + combinationPrices.get(0).getPrice() + " euros, of which " + combinationPrices.get(0).getTax() + " is tax");
+      writer.write("Cheapest price:\n" + combinationPrices.get(0).getPrice() + " euros, of which "
+          + combinationPrices.get(0).getTax() + " is tax");
       writer.write("\nAll flight combination taxes:\n");
       Collections.sort(combinationPrices, Comparator.comparing(Flight::getTax));
-      for(Flight fl : combinationPrices) {
+      for (Flight fl : combinationPrices) {
         writer.write(fl.getTax() + "\n");
       }
     } catch (IOException e) {
@@ -354,17 +374,17 @@ public class SeleniumScrapper {
     try {
       writer = new FileWriter("SAS_flights.txt");
       writer.write("Outbound flights:\n");
-      for(Flight fl : outbound) {
+      for (Flight fl : outbound) {
         writer.write(fl.toString() + "\n");
       }
       writer.write("Inbound flights:\n");
-      for(Flight fl : inbound) {
+      for (Flight fl : inbound) {
         writer.write(fl.toString() + "\n");
       }
     } catch (IOException e) {
       System.err.println(e.getMessage());
     }
-    
+
     if (writer != null) {
       try {
         writer.close();
@@ -372,7 +392,7 @@ public class SeleniumScrapper {
         e.printStackTrace();
       }
     }
-    
+
   }
 
 }
