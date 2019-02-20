@@ -25,6 +25,7 @@ public class BasicCrawler {
       System.err.println(e.getMessage());
     }
 
+    //Different URL for each flight
     for (int i = 1; i < 31; i++) {
       if (i < 10) {
         norURL =
@@ -43,12 +44,14 @@ public class BasicCrawler {
       } catch (IOException e) {
         System.err.println(e.getMessage());
       }
-
+      
+      //Select needed elements from the page
       Elements dep = doc.select("td.depdest > div.content");
       Elements arr = doc.select("td.arrdest > div.content");
       Elements prices = doc.select("td.fareselect > div.content > label");
       Elements taxes = doc.select("tr:has(span#bookingPrice_TaxesToggleIcon) > td.rightcell");
 
+      //Write the data to file
       try {
         writer.write("Day: " + i + "\n");
         writer.write("Departure time and airport:\n");
