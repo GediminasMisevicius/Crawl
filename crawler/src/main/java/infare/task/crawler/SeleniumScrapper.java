@@ -5,10 +5,11 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -148,7 +149,7 @@ public class SeleniumScrapper {
     Matcher m2 = p2.matcher(truncatedData);
 
     String copenhagelessData = m2.replaceAll("");
-    
+
     formatData(copenhagelessData);
 
     FileWriter writer = null;
@@ -170,32 +171,43 @@ public class SeleniumScrapper {
   }
 
   public void formatData(String sas) {
-    
+
     List<String> flightSegments = new ArrayList<>();
     List<Flight> outbound = new ArrayList<>();
     List<Flight> inbound = new ArrayList<>();
-    
+
     Pattern pattern = Pattern.compile("s(.*?\\n)*?}");
     Matcher matcher = pattern.matcher(sas);
-    
+
+    // Divide the data into flight groups
     while (matcher.find()) {
       flightSegments.add(matcher.group());
     }
-    
+
+    // Regex patterns for data formatting
     Pattern patternPrice = Pattern.compile("(?<='price':').*?(?=',)");
     Pattern patternTax = Pattern.compile("(?<='tax':').*?(?=',)");
-    Pattern patternARNtoLHR = Pattern.compile("(?<=segment.bLocation   = \")ARN(?=\";\\nsegment.eLocation   = \"LHR\";)");
-    Pattern patternARNtoOSL = Pattern.compile("(?<=segment.bLocation   = \")ARN(?=\";\\nsegment.eLocation   = \"OSL\";)");
-    Pattern patternOSLtoLHR = Pattern.compile("(?<=segment.bLocation   = \")OSL(?=\";\\nsegment.eLocation   = \"LHR\";)");
-    Pattern patternLHRtoARN = Pattern.compile("(?<=segment.bLocation   = \")LHR(?=\";\\nsegment.eLocation   = \"ARN\";)");
-    Pattern patternLHRtoOSL = Pattern.compile("(?<=segment.bLocation   = \")LHR(?=\";\\nsegment.eLocation   = \"OSL\";)");
-    Pattern patternOSLtoARN = Pattern.compile("(?<=segment.bLocation   = \")OSL(?=\";\\nsegment.eLocation   = \"ARN\";)");
+    Pattern patternARNtoLHR =
+        Pattern.compile("(?<=segment.bLocation   = \")ARN(?=\";\\nsegment.eLocation   = \"LHR\";)");
+    Pattern patternARNtoOSL =
+        Pattern.compile("(?<=segment.bLocation   = \")ARN(?=\";\\nsegment.eLocation   = \"OSL\";)");
+    Pattern patternOSLtoLHR =
+        Pattern.compile("(?<=segment.bLocation   = \")OSL(?=\";\\nsegment.eLocation   = \"LHR\";)");
+    Pattern patternLHRtoARN =
+        Pattern.compile("(?<=segment.bLocation   = \")LHR(?=\";\\nsegment.eLocation   = \"ARN\";)");
+    Pattern patternLHRtoOSL =
+        Pattern.compile("(?<=segment.bLocation   = \")LHR(?=\";\\nsegment.eLocation   = \"OSL\";)");
+    Pattern patternOSLtoARN =
+        Pattern.compile("(?<=segment.bLocation   = \")OSL(?=\";\\nsegment.eLocation   = \"ARN\";)");
     Pattern patternBTime = Pattern.compile("(?<=segment.bDate = \".{3} Apr .{2} ).*(?= GMT)");
     Pattern patternETime = Pattern.compile("(?<=segment.eDate =\\s\".{3} Apr .{2} ).*(?= GMT)");
-    
+
+    // Time format
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
-    
-    for(String segment : flightSegments) {
+
+    // Cycle for each divided flight group
+    for (String segment : flightSegments) {
+      // Find the flight group prices and taxes
       Matcher matcherPrice = patternPrice.matcher(segment);
       Matcher matcherTax = patternTax.matcher(segment);
       matcherPrice.find();
@@ -205,82 +217,162 @@ public class SeleniumScrapper {
       BigDecimal priceNum = BigDecimal.valueOf(Double.parseDouble(price));
       BigDecimal taxNum = BigDecimal.valueOf(Double.parseDouble(tax));
 
+      // Create matchers for the flight group
       Matcher matcherARNtoLHR = patternARNtoLHR.matcher(segment);
       Matcher matcherARNtoOSL = patternARNtoOSL.matcher(segment);
       Matcher matcherOSLtoLHR = patternOSLtoLHR.matcher(segment);
       Matcher matcherLHRtoARN = patternLHRtoARN.matcher(segment);
       Matcher matcherLHRtoOSL = patternLHRtoOSL.matcher(segment);
       Matcher matcherOSLtoARN = patternOSLtoARN.matcher(segment);
-      
+
       Matcher matcherBTime = patternBTime.matcher(segment);
       Matcher matcherETime = patternETime.matcher(segment);
-      
-      while(matcherARNtoLHR.find()) {
+
+
+      // OUTBOUND FLIGHTS
+      while (matcherARNtoLHR.find()) {
         Flight outFl = new Flight();
         outFl.setDepartureAirport("ARN");
         outFl.setArrivalAirport("LHR");
-//        outFl.setConnectingAirport(null);
         outFl.setPrice(priceNum);
         outFl.setTax(taxNum);
-        
+
         matcherBTime.find();
         matcherETime.find();
         String bTime = matcherBTime.group();
         String eTime = matcherETime.group();
         outFl.setDepartureTime(LocalTime.parse(bTime, formatter));
         outFl.setArrivalTime(LocalTime.parse(eTime, formatter));
-        
+
         outbound.add(outFl);
       }
-      
-      int skipCounter = 0;
-      while(matcherARNtoOSL.find()) {
-        skipCounter++;
+
+      // OUTBOUND FLIGHTS WITH CONNECTION
+      // skip cycle
+      while (matcherOSLtoLHR.find()) {
+        matcherETime.find();
       }
-      while(matcherARNtoOSL.find()) {
+      while (matcherARNtoOSL.find()) {
         Flight outFl = new Flight();
         outFl.setDepartureAirport("ARN");
         outFl.setConnectingAirport("OSL");
         outFl.setArrivalAirport("LHR");
         outFl.setPrice(priceNum);
         outFl.setTax(taxNum);
-        
+
         matcherBTime.find();
         String bTime = matcherBTime.group();
         outFl.setDepartureTime(LocalTime.parse(bTime, formatter));
         matcherETime.find();
-      }
-      
-    }
-    
-    for(Flight fl : outbound) {
-      System.out.println(fl.toString());
-    }
-    
-//    String file = "SAS_data.txt";
-//    BufferedReader reader = null;
-//
-//    try {
-//      reader = new BufferedReader(new FileReader(file));
-//      
-//      String currentLine = reader.readLine();
-//
-//      if (currentLine.contains("ARN")) {
-//        
-//      }
-//      currentLine = reader.readLine();
-//
-//    } catch (IOException e) {
-//      e.printStackTrace();
-//    } finally {
-//      if (reader != null)
-//        try {
-//          reader.close();
-//        } catch (IOException e) {
-//          e.printStackTrace();
-//        }
-//    }
+        String eTime = matcherETime.group();
+        outFl.setArrivalTime(LocalTime.parse(eTime, formatter));
 
+        outbound.add(outFl);
+      }
+
+
+      // INBOUND FLIGHTS
+      while (matcherLHRtoARN.find()) {
+        Flight inFl = new Flight();
+        inFl.setDepartureAirport("LHR");
+        inFl.setArrivalAirport("ARN");
+        // outFl.setConnectingAirport(null);
+        inFl.setPrice(priceNum);
+        inFl.setTax(taxNum);
+
+        matcherBTime.find();
+        matcherETime.find();
+        String bTime = matcherBTime.group();
+        String eTime = matcherETime.group();
+        inFl.setDepartureTime(LocalTime.parse(bTime, formatter));
+        inFl.setArrivalTime(LocalTime.parse(eTime, formatter));
+
+        inbound.add(inFl);
+      }
+
+      // INBOUND FLIGHTS WITH CONNECTION
+      // skip cycle
+      while (matcherOSLtoARN.find()) {
+        matcherETime.find();
+      }
+      while (matcherLHRtoOSL.find()) {
+        Flight inFl = new Flight();
+        inFl.setDepartureAirport("LHR");
+        inFl.setConnectingAirport("OSL");
+        inFl.setArrivalAirport("ARN");
+        inFl.setPrice(priceNum);
+        inFl.setTax(taxNum);
+
+        matcherBTime.find();
+        String bTime = matcherBTime.group();
+        inFl.setDepartureTime(LocalTime.parse(bTime, formatter));
+        matcherETime.find();
+        String eTime = matcherETime.group();
+        inFl.setArrivalTime(LocalTime.parse(eTime, formatter));
+
+        inbound.add(inFl);
+      }
+
+    }
+    
+    
+    visualiseData(outbound, inbound);
+
+
+  }
+  
+  public void visualiseData(List<Flight> outbound, List<Flight> inbound) {
+    
+    List<Flight> combinationPrices = new ArrayList<>();
+    
+    for(Flight out : outbound) {
+      for(Flight in : inbound) {
+        Flight comb = new Flight();
+        comb.setPrice(out.getPrice().add(in.getPrice()));
+        comb.setTax(out.getTax().add(in.getTax()));
+        combinationPrices.add(comb);
+      }
+    }
+    
+    Collections.sort(combinationPrices, Comparator.comparing(Flight::getPrice));
+    
+    
+    FileWriter writer = null;
+    
+    try {
+      writer = new FileWriter("SAS_prices.txt");
+      writer.write("Cheapest price:\n" + combinationPrices.get(0).getPrice() + " euros, of which " + combinationPrices.get(0).getTax() + " is tax");
+      writer.write("\nAll flight combination taxes:\n");
+      Collections.sort(combinationPrices, Comparator.comparing(Flight::getTax));
+      for(Flight fl : combinationPrices) {
+        writer.write(fl.getTax() + "\n");
+      }
+    } catch (IOException e) {
+      System.err.println(e.getMessage());
+    }
+
+    try {
+      writer = new FileWriter("SAS_flights.txt");
+      writer.write("Outbound flights:\n");
+      for(Flight fl : outbound) {
+        writer.write(fl.toString() + "\n");
+      }
+      writer.write("Inbound flights:\n");
+      for(Flight fl : inbound) {
+        writer.write(fl.toString() + "\n");
+      }
+    } catch (IOException e) {
+      System.err.println(e.getMessage());
+    }
+    
+    if (writer != null) {
+      try {
+        writer.close();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+    
   }
 
 }
