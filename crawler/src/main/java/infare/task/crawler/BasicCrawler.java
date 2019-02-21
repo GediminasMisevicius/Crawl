@@ -9,6 +9,12 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+/**
+ * Scrapes the html content of a website. Doesn't see JS generated content, but in the case of
+ * norwegian.com it is not needed.
+ * 
+ * @author gediminas
+ */
 public class BasicCrawler {
 
   private Document doc;
@@ -20,12 +26,12 @@ public class BasicCrawler {
     FileWriter writer = null;
 
     try {
-      writer = new FileWriter("norway.txt", true);
+      writer = new FileWriter("src/main/resources/norwegian.txt", true);
     } catch (IOException e) {
       System.err.println(e.getMessage());
     }
 
-    //Different URL for each flight
+    // Different URL for each flight
     for (int i = 1; i < 31; i++) {
       if (i < 10) {
         norURL =
@@ -40,19 +46,19 @@ public class BasicCrawler {
       }
 
       try {
-        Thread.sleep(2000);
+        Thread.sleep(1000);
         this.doc = Jsoup.connect(norURL).get();
       } catch (IOException e) {
         System.err.println(e.getMessage());
       }
-      
-      //Select needed elements from the page
+
+      // Select needed elements from the page
       Elements dep = doc.select("td.depdest > div.content");
       Elements arr = doc.select("td.arrdest > div.content");
       Elements prices = doc.select("td.fareselect > div.content > label");
       Elements taxes = doc.select("tr:has(span#bookingPrice_TaxesToggleIcon) > td.rightcell");
 
-      //Write the data to file
+      // Write the data to file
       try {
         writer.write("Day: " + i + "\n");
         writer.write("Departure time and airport:\n");

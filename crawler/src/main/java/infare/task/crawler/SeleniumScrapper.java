@@ -16,15 +16,17 @@ import java.util.regex.Pattern;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.firefox.FirefoxProfile;
-import org.openqa.selenium.phantomjs.PhantomJSDriver;
-import org.openqa.selenium.phantomjs.PhantomJSDriverService;
-import org.openqa.selenium.remote.DesiredCapabilities;
 
+/**
+ * Uses Selenium to complete a flight search and get the needed data.
+ * Needs manual captcha solving
+ * 
+ * @author gediminas
+ *
+ */
 public class SeleniumScrapper {
 
 
@@ -103,13 +105,13 @@ public class SeleniumScrapper {
 
   // Writes page source to text file
   public void getSource() throws InterruptedException {
-    Thread.sleep(20000);
+    Thread.sleep(20000); // for captcha completion
     String pageSource = driver.getPageSource();
-
+    
     FileWriter writer = null;
 
     try {
-      writer = new FileWriter("SAS_Source.txt", true);
+      writer = new FileWriter("src/main/resources/SAS_Source.txt", true);
       writer.write(pageSource);
     } catch (IOException e) {
       System.err.println(e.getMessage());
@@ -127,7 +129,7 @@ public class SeleniumScrapper {
   // Extracts needed data from source file
   public void getDataFromSource() {
 
-    String file = "SAS_Source.txt";
+    String file = "src/main/resources/SAS_Source.txt";
     StringBuilder builder = new StringBuilder();
     BufferedReader reader = null;
 
@@ -174,7 +176,7 @@ public class SeleniumScrapper {
     FileWriter writer = null;
 
     try {
-      writer = new FileWriter("SAS_data.txt");
+      writer = new FileWriter("src/main/resources/SAS_data.txt");
       writer.write(copenhagelessData);
     } catch (IOException e) {
       System.err.println(e.getMessage());
@@ -359,7 +361,7 @@ public class SeleniumScrapper {
     FileWriter writer = null;
 
     try {
-      writer = new FileWriter("SAS_prices.txt");
+      writer = new FileWriter("src/main/resources/SAS_prices.txt");
       writer.write("Cheapest price:\n" + combinationPrices.get(0).getPrice() + " euros, of which "
           + combinationPrices.get(0).getTax() + " is tax");
       writer.write("\nAll flight combination taxes:\n");
@@ -372,7 +374,7 @@ public class SeleniumScrapper {
     }
 
     try {
-      writer = new FileWriter("SAS_flights.txt");
+      writer = new FileWriter("src/main/resources/SAS_flights.txt");
       writer.write("Outbound flights:\n");
       for (Flight fl : outbound) {
         writer.write(fl.toString() + "\n");
